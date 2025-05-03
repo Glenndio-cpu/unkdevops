@@ -2,7 +2,7 @@
 session_start();
 include "config/db.php";
 
-
+// Cek login
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -10,6 +10,7 @@ if (!isset($_SESSION['user_id'])) {
 
 $message = "";
 
+// Daftar kategori yang tersedia sesuai dengan ENUM yang telah dibuat di database
 $categories = ['Makanan', 'Minuman', 'Transportasi', 'Kesehatan', 'Hiburan', 'Lainnya'];
 ?>
 
@@ -30,6 +31,7 @@ $categories = ['Makanan', 'Minuman', 'Transportasi', 'Kesehatan', 'Hiburan', 'La
             <div class="alert alert-info"><?= $message ?></div>
         <?php endif; ?>
 
+        <!-- Form untuk tambah transaksi -->
         <form method="POST" action="proses_tambah.php">
             <div class="mb-3">
                 <label for="type" class="form-label">Jenis Transaksi</label>
