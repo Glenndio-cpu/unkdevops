@@ -18,7 +18,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Insert transaksi ke dalam tabel transactions
     $stmt = $conn->prepare("INSERT INTO transactions (user_id, type, amount, description, category) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssds", $user_id, $type, $amount, $description, $category);
+    $stmt->bind_param("isdss", $user_id, $type, $amount, $description, $category);
 
     if ($stmt->execute()) {
         // Insert ke transaction_history
