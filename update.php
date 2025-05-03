@@ -19,8 +19,8 @@ $stmt->fetch();
 $stmt->close();
 
 // Handle update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_id'])) {
-    $id = $_POST['update_id'];
+if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['id'])) {
+    $id = $_POST['id'];
     $type = $_POST['type'];
     $amount = $_POST['amount'];
     $description = $_POST['description'];
@@ -31,40 +31,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_id'])) {
     $stmt->execute();
     $stmt->close();
 
-    // Catat histori
-    $log = $conn->prepare("INSERT INTO history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Updated', NOW())");
-    $log->bind_param("ii", $id, $user_id);
-    $log->execute();
-    $log->close();
+    // Log ke history
+    $hist = $conn->prepare("INSERT INTO transactions_history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Updated', NOW())");
+    $hist->bind_param("ii", $id, $user_id);
+    $hist->execute();
+    $hist->close();
 
-    header("Location: update.php?updated=1");
+    header("Location: update.php?success=1");
     exit;
 }
 
 // Handle delete
 if (isset($_GET['delete_id'])) {
-    $id = $_GET['delete_id'];
+    $delete_id = $_GET['delete_id'];
 
-    // Cek apakah transaksi milik user
-    $cek = $conn->prepare("SELECT id FROM transactions WHERE id = ? AND user_id = ?");
-    $cek->bind_param("ii", $id, $user_id);
-    $cek->execute();
-    $result = $cek->get_result();
-    if ($result->num_rows > 0) {
-        // Hapus transaksi
-        $del = $conn->prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?");
-        $del->bind_param("ii", $id, $user_id);
-        $del->execute();
-        $del->close();
+    // Hapus transaksi
+    $stmt = $conn->prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $delete_id, $user_id);
+    $stmt->execute();
+    $stmt->close();
 
-        // Catat histori
-        $log = $conn->prepare("INSERT INTO history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Deleted', NOW())");
-        $log->bind_param("ii", $id, $user_id);
-        $log->execute();
-        $log->close();
+    // Log ke history
+    $log = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Deleted', NOW())");
+    $log->bind_param("ii", $delete_id, $user_id);
+    $log->execute();
+    $log->close();
 
-        header("Location: update.php?deleted=1");
-        exit;
+    header("Location: update.php?deleted=1");
+    exit;
+}
+
+// Mode edit
+$edit_mode = false;
+$edit_data = null;
+
+if (isset($_GET['id'])) {
+    $edit_mode = true;
+    $id = $_GET['id'];
+
+    $stmt = $conn->prepare("SELECT id, type, amount, description FROM transactions WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $id, $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $edit_data = $result->fetch_assoc();
+    $stmt->close();
+
+    if (!$edit_data) {
+        die("Transaksi tidak ditemukan atau bukan milik Anda.");
     }
 }
 
@@ -74,18 +87,6 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $transactions = $stmt->get_result();
 $stmt->close();
-
-// Untuk mode edit
-$edit_data = null;
-if (isset($_GET['edit_id'])) {
-    $edit_id = $_GET['edit_id'];
-    $stmt = $conn->prepare("SELECT id, type, amount, description FROM transactions WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("ii", $edit_id, $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $edit_data = $result->fetch_assoc();
-    $stmt->close();
-}
 ?>
 
 <!DOCTYPE html>
@@ -93,28 +94,28 @@ if (isset($_GET['edit_id'])) {
 
 <head>
     <meta charset="UTF-8">
-    <title>Update & Delete Transaksi</title>
+    <title>Update Transaksi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-light">
     <div class="container mt-5">
-        <h3 class="mb-4">Manajemen Transaksi - Halo, <strong><?= htmlspecialchars($username) ?></strong></h3>
+        <h3 class="mb-4">Update Transaksi - Hai, <strong><?= htmlspecialchars($username) ?></strong></h3>
 
-        <?php if (isset($_GET['updated'])): ?>
-            <div class="alert alert-success">Transaksi berhasil diperbarui!</div>
+        <?php if (isset($_GET['success'])): ?>
+            <div class="alert alert-success">✅ Transaksi berhasil diperbarui.</div>
         <?php elseif (isset($_GET['deleted'])): ?>
-            <div class="alert alert-warning">Transaksi berhasil dihapus!</div>
+            <div class="alert alert-warning">🗑️ Transaksi berhasil dihapus.</div>
         <?php endif; ?>
 
-        <?php if ($edit_data): ?>
+        <?php if ($edit_mode && $edit_data): ?>
             <div class="card mb-4">
                 <div class="card-body">
                     <h5>Edit Transaksi</h5>
-                    <form method="POST" action="update.php">
-                        <input type="hidden" name="update_id" value="<?= $edit_data['id'] ?>">
+                    <form method="POST" action="">
+                        <input type="hidden" name="id" value="<?= $edit_data['id'] ?>">
                         <div class="mb-3">
-                            <label class="form-label">Tipe</label>
+                            <label for="type" class="form-label">Tipe Transaksi</label>
                             <select name="type" class="form-select" required>
                                 <option value="pemasukan" <?= $edit_data['type'] === 'pemasukan' ? 'selected' : '' ?>>Pemasukan
                                 </option>
@@ -123,24 +124,24 @@ if (isset($_GET['edit_id'])) {
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Jumlah</label>
+                            <label for="amount" class="form-label">Jumlah (Rp)</label>
                             <input type="number" name="amount" class="form-control" value="<?= $edit_data['amount'] ?>"
                                 required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Deskripsi</label>
+                            <label for="description" class="form-label">Deskripsi</label>
                             <input type="text" name="description" class="form-control"
                                 value="<?= htmlspecialchars($edit_data['description']) ?>" required>
                         </div>
-                        <button type="submit" class="btn btn-success">Simpan</button>
+                        <button type="submit" class="btn btn-success">Simpan Perubahan</button>
                         <a href="update.php" class="btn btn-secondary">Batal</a>
                     </form>
                 </div>
             </div>
         <?php endif; ?>
 
-        <h5>Daftar Transaksi</h5>
-        <table class="table table-bordered">
+        <h5>Daftar Transaksi Anda</h5>
+        <table class="table table-bordered table-striped">
             <thead>
                 <tr>
                     <th>Tipe</th>
@@ -156,7 +157,7 @@ if (isset($_GET['edit_id'])) {
                         <td>Rp <?= number_format($row['amount'], 2, ',', '.') ?></td>
                         <td><?= htmlspecialchars($row['description']) ?></td>
                         <td>
-                            <a href="update.php?edit_id=<?= $row['id'] ?>" class="btn btn-sm btn-warning">Edit</a>
+                            <a href="update.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-warning">Edit</a>
                             <a href="update.php?delete_id=<?= $row['id'] ?>" class="btn btn-sm btn-danger"
                                 onclick="return confirm('Yakin ingin menghapus transaksi ini?')">Hapus</a>
                         </td>
@@ -165,7 +166,7 @@ if (isset($_GET['edit_id'])) {
             </tbody>
         </table>
 
-        <a href="dashboard.php" class="btn btn-primary mt-3">Kembali ke Dashboard</a>
+        <a href="dashboard.php" class="btn btn-primary mt-3">← Kembali ke Dashboard</a>
     </div>
 </body>
 
