@@ -18,7 +18,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Insert transaksi ke dalam tabel transactions
     $stmt = $conn->prepare("INSERT INTO transactions (user_id, type, amount, description, category) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("isds", $user_id, $type, $amount, $description, $category);
+    $stmt->bind_param("ssds", $user_id, $type, $amount, $description, $category);
 
     if ($stmt->execute()) {
         // Insert ke transaction_history
@@ -49,7 +49,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 </head>
 
 <body class="bg-light">
-
     <div class="container mt-5">
         <h3 class="text-center mb-4">Tambah Transaksi</h3>
 
@@ -94,7 +93,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
 
     </div>
-
 </body>
 
 </html>
