@@ -23,16 +23,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->bind_param("isdss", $user_id, $type, $amount, $description, $category);
 
     if ($stmt->execute()) {
-        // Ambil ID transaksi yang baru ditambahkan
+
         $transaction_id = $stmt->insert_id;
 
-        // Masukkan riwayat transaksi ke tabel transaction_history
-        $action = 'Added'; // Karena transaksi baru ditambahkan
-        $action_time = date('Y-m-d H:i:s'); // Waktu sekarang
+        $action = 'Added';
+        $action_time = date('Y-m-d H:i:s');
         $history_stmt = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_time) VALUES (?, ?, ?, ?)");
         $history_stmt->bind_param("iiis", $transaction_id, $user_id, $action, $action_time);
-        $history_stmt->execute();
-
+        if (!$history_stmt->execute()) {
+            echo "Gagal menyimpan ke transaction_history: " . $history_stmt->error;
+        } else {
+            echo "Riwayat berhasil ditambahkan.<br>";
+        }
         $message = "Transaksi berhasil ditambahkan!";
     } else {
         $message = "Gagal menyimpan transaksi.";
