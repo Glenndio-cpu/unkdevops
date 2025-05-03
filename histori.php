@@ -10,7 +10,6 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Query untuk mengambil riwayat transaksi pengguna
 $query = "
     SELECT t.id, t.type, t.amount, t.category, t.description, t.created_at 
     FROM transactions t
