@@ -25,23 +25,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id'])) {
     $amount = $_POST['amount'];
     $description = $_POST['description'];
 
-    // Update data
+    // Update transaksi
     $stmt = $conn->prepare("UPDATE transactions SET type = ?, amount = ?, description = ? WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ssdii", $type, $amount, $description, $id, $user_id);
     $stmt->execute();
     $stmt->close();
 
-    // Tambahkan ke histori
+    // Catat histori
     $histori = $conn->prepare("INSERT INTO history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Updated', NOW())");
     $histori->bind_param("ii", $id, $user_id);
     $histori->execute();
     $histori->close();
 
+    // Redirect untuk menghindari resubmit dan hapus parameter id
     header("Location: update.php?success=1");
     exit;
 }
 
-// Jika ada parameter id, ambil data transaksi
+// Ambil data untuk edit jika id ada di parameter
 $edit_mode = false;
 $edit_data = null;
 
@@ -82,15 +83,11 @@ $stmt->close();
     <div class="container mt-5">
         <h3 class="mb-4">Update Transaksi - Hai, <strong><?= htmlspecialchars($username) ?></strong></h3>
 
-        <?php if (isset($_GET['success'])): ?>
-            <div class="alert alert-success">Transaksi berhasil diperbarui!</div>
-        <?php endif; ?>
-
         <?php if ($edit_mode && $edit_data): ?>
             <div class="card mb-4">
                 <div class="card-body">
                     <h5>Edit Transaksi</h5>
-                    <form method="POST" action="">
+                    <form method="POST" action="update.php">
                         <input type="hidden" name="id" value="<?= $edit_data['id'] ?>">
                         <div class="mb-3">
                             <label for="type" class="form-label">Tipe Transaksi</label>
@@ -142,6 +139,14 @@ $stmt->close();
 
         <a href="dashboard.php" class="btn btn-primary">Kembali ke Dashboard</a>
     </div>
+
+    <?php if (isset($_GET['success'])): ?>
+        <script>
+            window.onload = function () {
+                alert("Transaksi berhasil diperbarui!");
+            };
+        </script>
+    <?php endif; ?>
 </body>
 
 </html>
