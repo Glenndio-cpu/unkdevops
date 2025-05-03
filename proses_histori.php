@@ -49,6 +49,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $history_stmt->bind_param("iiss", $transaction_id, $user_id, $action, $action_time);
             $history_stmt->execute();
             $history_stmt->close();
+        } else {
+            // Jika query delete gagal
+            echo "Error deleting transaction.";
         }
         $stmt->close();
     }
