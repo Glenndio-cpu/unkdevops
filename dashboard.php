@@ -1,8 +1,8 @@
 <?php
+// ======= File: dashboard.php =======
 session_start();
 include "config/db.php";
 
-// Cek apakah pengguna sudah login
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -10,7 +10,6 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Ambil username dari database
 $stmt_user = $conn->prepare("SELECT username FROM users WHERE id = ?");
 $stmt_user->bind_param("i", $user_id);
 $stmt_user->execute();
@@ -18,7 +17,6 @@ $stmt_user->bind_result($username);
 $stmt_user->fetch();
 $stmt_user->close();
 
-// Query untuk menghitung total pemasukan dan pengeluaran
 $query = "
     SELECT 
         SUM(CASE WHEN type = 'pemasukan' THEN amount ELSE 0 END) AS total_pemasukan,
@@ -38,7 +36,6 @@ $total_pemasukan = $total_pemasukan ?? 0;
 $total_pengeluaran = $total_pengeluaran ?? 0;
 $saldo = $total_pemasukan - $total_pengeluaran;
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -54,7 +51,6 @@ $saldo = $total_pemasukan - $total_pengeluaran;
             <div class="col-md-8">
                 <div class="card shadow">
                     <div class="card-body">
-
                         <h4 class="text-end">Hai, <strong><?= htmlspecialchars($username) ?></strong> 👋</h4>
                         <h3 class="text-center mb-4">Dashboard Keuangan</h3>
 
@@ -76,7 +72,8 @@ $saldo = $total_pemasukan - $total_pengeluaran;
                         <hr>
 
                         <a href="tambah.php" class="btn btn-primary">Tambah Transaksi</a>
-                        <a href="histori.php" class="btn btn-secondary">Lihat Transaksi</a>
+                        <a href="histori.php" class="btn btn-secondary">Lihat Histori</a>
+                        <a href="update.php" class="btn btn-warning">Update Data</a>
                         <a href="logout.php" class="btn btn-danger">Logout</a>
                     </div>
                 </div>
