@@ -11,40 +11,11 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $action = $_POST['action']; // action: 'add', 'update', 'delete'
+    $action = $_POST['action']; // action: 'update', 'delete'
     $transaction_id = $_POST['transaction_id'];
 
-    // Handle Add
-    if ($action == 'add') {
-        // Ambil data transaksi
-        $type = $_POST['type'];
-        $amount = $_POST['amount'];
-        $description = $_POST['description'];
-        $category = $_POST['category'];
-
-        // Insert transaksi baru
-        $stmt = $conn->prepare("INSERT INTO transactions (user_id, type, amount, description, category) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("isdss", $user_id, $type, $amount, $description, $category);
-        if ($stmt->execute()) {
-            $transaction_id = $stmt->insert_id;
-
-            // Insert ke transaction_history
-            $action = 'Added';
-            $action_time = date('Y-m-d H:i:s');
-            $history_stmt = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_time) VALUES (?, ?, ?, ?)");
-            $history_stmt->bind_param("iiss", $transaction_id, $user_id, $action, $action_time);
-            $history_stmt->execute();
-            $history_stmt->close();
-        }
-        $stmt->close();
-    }
-
     // Handle Update
-    elseif ($action == 'update') {
-        $type = $_POST['type'];
-        $amount = $_POST['amount'];
-        $description = $_POST['description'];
-        $category = $_POST['category'];
+    if ($action == 'update') {
 
         // Update transaksi
         $stmt = $conn->prepare("UPDATE transactions SET type = ?, amount = ?, description = ?, category = ? WHERE id = ? AND user_id = ?");
