@@ -10,6 +10,14 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
+// Ambil username dari database
+$stmt_user = $conn->prepare("SELECT username FROM users WHERE id = ?");
+$stmt_user->bind_param("i", $user_id);
+$stmt_user->execute();
+$stmt_user->bind_result($username);
+$stmt_user->fetch();
+$stmt_user->close();
+
 // Query untuk menghitung total pemasukan dan pengeluaran
 $query = "
     SELECT 
@@ -46,6 +54,8 @@ $saldo = $total_pemasukan - $total_pengeluaran;
             <div class="col-md-8">
                 <div class="card shadow">
                     <div class="card-body">
+
+                        <h4 class="text-end">Hai, <strong><?= htmlspecialchars($username) ?></strong> 👋</h4>
                         <h3 class="text-center mb-4">Dashboard Keuangan</h3>
 
                         <div class="row">
@@ -73,7 +83,6 @@ $saldo = $total_pemasukan - $total_pengeluaran;
             </div>
         </div>
     </div>
-
 </body>
 
 </html>
