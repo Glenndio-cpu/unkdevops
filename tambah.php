@@ -11,22 +11,28 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $type = $_POST['type'];
+    // Ambil data dari form
+    $type = $_POST['type']; // pemasukan atau pengeluaran
     $amount = $_POST['amount'];
     $description = $_POST['description'];
     $category = $_POST['category'];
 
+    // Insert transaksi ke dalam tabel transactions
     $stmt = $conn->prepare("INSERT INTO transactions (user_id, type, amount, description, category) VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("isdss", $user_id, $type, $amount, $description, $category);
 
     if ($stmt->execute()) {
+        // Ambil ID transaksi yang baru saja dimasukkan
+        $transaction_id = $conn->insert_id;
 
-        $action = 'Added';
-        $action_time = date('Y-m-d H:i:s');
-        $history_stmt = $conn->prepare("INSERT INTO transactions_history (transaction_id, user_id, action, action_time) VALUES (?, ?, ?, ?)");
-        $history_stmt->bind_param("iiss", $conn->insert_id, $user_id, $action, $action_time);
+        // Insert riwayat transaksi ke dalam tabel transactions_history
+        $action = 'Added'; // Menandakan bahwa transaksi baru ditambahkan
+        $action_time = date('Y-m-d H:i:s'); // Waktu transaksi dibuat
+        $history_stmt = $conn->prepare("INSERT INTO transactions_history (transaction_id, user_id, action, action_date) VALUES (?, ?, ?, ?)");
+        $history_stmt->bind_param("iiss", $transaction_id, $user_id, $action, $action_time);
         $history_stmt->execute();
 
+        // Redirect ke dashboard setelah sukses
         header("Location: dashboard.php");
         exit;
     } else {
