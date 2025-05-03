@@ -1,8 +1,8 @@
 <?php
-// ======= File: dashboard.php =======
 session_start();
 include "config/db.php";
 
+// Cek apakah user sudah login
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -10,13 +10,15 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-$stmt_user = $conn->prepare("SELECT username FROM users WHERE id = ?");
-$stmt_user->bind_param("i", $user_id);
-$stmt_user->execute();
-$stmt_user->bind_result($username);
-$stmt_user->fetch();
-$stmt_user->close();
+// Ambil username
+$stmt = $conn->prepare("SELECT username FROM users WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$stmt->bind_result($username);
+$stmt->fetch();
+$stmt->close();
 
+// Hitung total pemasukan & pengeluaran
 $query = "
     SELECT 
         SUM(CASE WHEN type = 'pemasukan' THEN amount ELSE 0 END) AS total_pemasukan,
@@ -36,12 +38,13 @@ $total_pemasukan = $total_pemasukan ?? 0;
 $total_pengeluaran = $total_pengeluaran ?? 0;
 $saldo = $total_pemasukan - $total_pengeluaran;
 ?>
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - Keuangan Harian</title>
+    <title>Dashboard Keuangan Harian</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
@@ -52,29 +55,40 @@ $saldo = $total_pemasukan - $total_pengeluaran;
                 <div class="card shadow">
                     <div class="card-body">
                         <h4 class="text-end">Hai, <strong><?= htmlspecialchars($username) ?></strong> 👋</h4>
-                        <h3 class="text-center mb-4">Dashboard Keuangan</h3>
+                        <h3 class="text-center mb-4">Dashboard Keuangan Harian</h3>
 
-                        <div class="row">
+                        <div class="row text-center mb-3">
                             <div class="col-md-4">
-                                <h5>Total Pemasukan</h5>
-                                <p>Rp <?= number_format($total_pemasukan, 2, ',', '.') ?></p>
+                                <div class="border rounded p-3 bg-white">
+                                    <h6>Total Pemasukan</h6>
+                                    <p class="text-success fw-bold">Rp
+                                        <?= number_format($total_pemasukan, 2, ',', '.') ?>
+                                    </p>
+                                </div>
                             </div>
                             <div class="col-md-4">
-                                <h5>Total Pengeluaran</h5>
-                                <p>Rp <?= number_format($total_pengeluaran, 2, ',', '.') ?></p>
+                                <div class="border rounded p-3 bg-white">
+                                    <h6>Total Pengeluaran</h6>
+                                    <p class="text-danger fw-bold">Rp
+                                        <?= number_format($total_pengeluaran, 2, ',', '.') ?>
+                                    </p>
+                                </div>
                             </div>
                             <div class="col-md-4">
-                                <h5>Saldo</h5>
-                                <p>Rp <?= number_format($saldo, 2, ',', '.') ?></p>
+                                <div class="border rounded p-3 bg-white">
+                                    <h6>Saldo Saat Ini</h6>
+                                    <p class="fw-bold">Rp <?= number_format($saldo, 2, ',', '.') ?></p>
+                                </div>
                             </div>
                         </div>
 
-                        <hr>
+                        <div class="text-center mt-4">
+                            <a href="tambah.php" class="btn btn-primary">Tambah Transaksi</a>
+                            <a href="update.php" class="btn btn-warning text-white">Update Transaksi</a>
+                            <a href="histori.php" class="btn btn-secondary">Histori Transaksi</a>
+                            <a href="logout.php" class="btn btn-danger">Logout</a>
+                        </div>
 
-                        <a href="tambah.php" class="btn btn-primary">Tambah Transaksi</a>
-                        <a href="histori.php" class="btn btn-secondary">Lihat Histori</a>
-                        <a href="update.php" class="btn btn-warning">Update Data</a>
-                        <a href="logout.php" class="btn btn-danger">Logout</a>
                     </div>
                 </div>
             </div>
