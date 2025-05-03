@@ -28,13 +28,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         $action = 'Added';
         $action_time = date('Y-m-d H:i:s');
+
         $history_stmt = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_time) VALUES (?, ?, ?, ?)");
-        $history_stmt->bind_param("iiis", $transaction_id, $user_id, $action, $action_time);
+        $history_stmt->bind_param("iiss", $transaction_id, $user_id, $action, $action_time);
+
         if (!$history_stmt->execute()) {
             echo "Gagal menyimpan ke transaction_history: " . $history_stmt->error;
         } else {
-            echo "Riwayat berhasil ditambahkan.<br>";
+            echo "Riwayat berhasil ditambahkan.";
         }
+
         $message = "Transaksi berhasil ditambahkan!";
     } else {
         $message = "Gagal menyimpan transaksi.";
