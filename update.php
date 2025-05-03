@@ -56,7 +56,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id'])) {
 
     // Update data
     $stmt = $conn->prepare("UPDATE transactions SET type = ?, amount = ?, description = ? WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("ssdii", $type, $amount, $description, $id, $user_id);
+    $stmt->bind_param("sisii", $type, $amount, $description, $id, $user_id);
     $stmt->execute();
     $stmt->close();
 
