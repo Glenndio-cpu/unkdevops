@@ -52,6 +52,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id'])) {
     $amount = $_POST['amount'];
     $description = $_POST['description'];
 
+    var_dump($description); // Cek apakah ada isinya
+
     // Update data
     $stmt = $conn->prepare("UPDATE transactions SET type = ?, amount = ?, description = ? WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ssdii", $type, $amount, $description, $id, $user_id);
@@ -131,8 +133,8 @@ $stmt->close();
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Deskripsi</label>
-                            <input type="text" name="description" class="form-control"
-                                value="<?= htmlspecialchars($edit_data['description']) ?>" required>
+                            <textarea name="description" class="form-control"
+                                required><?= htmlspecialchars($edit_data['description']) ?></textarea>
                         </div>
                         <button type="submit" class="btn btn-success">Simpan Perubahan</button>
                         <a href="update.php" class="btn btn-secondary">Batal</a>
