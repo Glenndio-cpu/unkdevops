@@ -12,9 +12,9 @@ $user_id = $_SESSION['user_id'];
 
 // Ambil riwayat transaksi dari tabel transaction_history
 $query = "SELECT th.*, t.type, t.amount, t.category, t.description
-            FROM transaction_history th
-            JOIN transactions t ON th.transaction_id = t.id
-            WHERE th.user_id = ?";
+          FROM transaction_history th
+          JOIN transactions t ON th.transaction_id = t.id
+          WHERE th.user_id = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
@@ -44,6 +44,7 @@ $result = $stmt->get_result();
                     <th>Deskripsi</th>
                     <th>Aksi</th>
                     <th>Waktu Aksi</th>
+                    <th>Opsi</th>
                 </tr>
             </thead>
             <tbody>
@@ -56,6 +57,12 @@ $result = $stmt->get_result();
                         <td><?= $row['description'] ?></td>
                         <td><?= $row['action'] ?></td>
                         <td><?= $row['action_time'] ?></td>
+                        <td>
+                            <a href="proses_histori.php?action=edit&id=<?= $row['id'] ?>"
+                                class="btn btn-warning btn-sm">Edit</a>
+                            <a href="proses_histori.php?action=delete&id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
+                                onclick="return confirm('Yakin ingin menghapus data ini?')">Hapus</a>
+                        </td>
                     </tr>
                 <?php endwhile; ?>
             </tbody>
