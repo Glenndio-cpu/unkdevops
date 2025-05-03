@@ -10,24 +10,9 @@ if (!isset($_SESSION['user_id'])) {
 
 $message = "";
 
-// Simpan transaksi jika form disubmit
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $type = $_POST['type'];
-    $amount = floatval($_POST['amount']);
-    $description = $_POST['description'];
-    $user_id = $_SESSION['user_id'];
-
-    $stmt = $conn->prepare("INSERT INTO transactions (user_id, type, amount, description) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("isds", $user_id, $type, $amount, $description);
-
-    if ($stmt->execute()) {
-        $message = "Transaksi berhasil ditambahkan!";
-    } else {
-        $message = "Gagal menyimpan transaksi.";
-    }
-
-    $stmt->close();
-}
+// Ambil data kategori dari database
+$kategori_query = "SELECT id, name FROM categories ORDER BY name ASC";
+$kategori_result = $conn->query($kategori_query);
 ?>
 
 <!DOCTYPE html>
@@ -65,6 +50,16 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="mb-3">
                 <label for="description" class="form-label">Deskripsi</label>
                 <input type="text" name="description" class="form-control">
+            </div>
+
+            <div class="mb-3">
+                <label for="category_id" class="form-label">Kategori</label>
+                <select name="category_id" class="form-select" required>
+                    <option value="">-- Pilih Kategori --</option>
+                    <?php while ($row = $kategori_result->fetch_assoc()): ?>
+                        <option value="<?= $row['id'] ?>"><?= htmlspecialchars($row['name']) ?></option>
+                    <?php endwhile; ?>
+                </select>
             </div>
 
             <button type="submit" class="btn btn-primary">Simpan</button>
