@@ -128,8 +128,8 @@ $stmt->close();
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Jumlah</label>
-                            <input type="number" name="amount" class="form-control" value="<?= $edit_data['amount'] ?>"
-                                required>
+                            <input type="number" name="amount" class="form-control"
+                                value="<?= (int) $edit_data['amount'] ?>" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Deskripsi</label>
