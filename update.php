@@ -2,7 +2,7 @@
 session_start();
 include "config/db.php";
 
-// Cek login
+// Cek apakah user sudah login
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -18,71 +18,70 @@ $stmt->bind_result($username);
 $stmt->fetch();
 $stmt->close();
 
-// Handle update
-if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['id'])) {
+// Proses DELETE
+if (isset($_GET['delete_id'])) {
+    $delete_id = $_GET['delete_id'];
+
+    // Cek apakah transaksi milik user
+    $stmt = $conn->prepare("SELECT * FROM transactions WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $delete_id, $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        // Tambah ke histori
+        $stmt2 = $conn->prepare("INSERT INTO transactions_history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Deleted', NOW())");
+        $stmt2->bind_param("ii", $delete_id, $user_id);
+        $stmt2->execute();
+        $stmt2->close();
+
+        // Hapus transaksi
+        $stmt3 = $conn->prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?");
+        $stmt3->bind_param("ii", $delete_id, $user_id);
+        $stmt3->execute();
+        $stmt3->close();
+
+        header("Location: update.php?deleted=1");
+        exit;
+    }
+}
+
+// Proses UPDATE
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id'])) {
     $id = $_POST['id'];
     $type = $_POST['type'];
     $amount = $_POST['amount'];
     $description = $_POST['description'];
 
-    // Update transaksi
+    // Update data
     $stmt = $conn->prepare("UPDATE transactions SET type = ?, amount = ?, description = ? WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ssdii", $type, $amount, $description, $id, $user_id);
     $stmt->execute();
     $stmt->close();
 
-    // Log ke history
-    $hist = $conn->prepare("INSERT INTO transactions_history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Updated', NOW())");
-    $hist->bind_param("ii", $id, $user_id);
-    $hist->execute();
-    $hist->close();
+    // Tambah ke histori
+    $stmt2 = $conn->prepare("INSERT INTO transactions_history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Updated', NOW())");
+    $stmt2->bind_param("ii", $id, $user_id);
+    $stmt2->execute();
+    $stmt2->close();
 
-    header("Location: update.php?success=1");
+    header("Location: update.php?updated=1");
     exit;
 }
 
-// Handle delete
-if (isset($_GET['delete_id'])) {
-    $delete_id = $_GET['delete_id'];
-
-    // Hapus transaksi
-    $stmt = $conn->prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("ii", $delete_id, $user_id);
-    $stmt->execute();
-    $stmt->close();
-
-    // Log ke history
-    $log = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Deleted', NOW())");
-    $log->bind_param("ii", $delete_id, $user_id);
-    $log->execute();
-    $log->close();
-
-    header("Location: update.php?deleted=1");
-    exit;
-}
-
-// Mode edit
-$edit_mode = false;
+// Ambil data untuk diedit (jika ada id)
 $edit_data = null;
-
 if (isset($_GET['id'])) {
-    $edit_mode = true;
-    $id = $_GET['id'];
-
-    $stmt = $conn->prepare("SELECT id, type, amount, description FROM transactions WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("ii", $id, $user_id);
+    $edit_id = $_GET['id'];
+    $stmt = $conn->prepare("SELECT * FROM transactions WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $edit_id, $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $edit_data = $result->fetch_assoc();
     $stmt->close();
-
-    if (!$edit_data) {
-        die("Transaksi tidak ditemukan atau bukan milik Anda.");
-    }
 }
 
-// Ambil semua transaksi user
-$stmt = $conn->prepare("SELECT id, type, amount, description FROM transactions WHERE user_id = ? ORDER BY id DESC");
+// Ambil semua transaksi milik user
+$stmt = $conn->prepare("SELECT * FROM transactions WHERE user_id = ? ORDER BY id DESC");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $transactions = $stmt->get_result();
@@ -100,36 +99,38 @@ $stmt->close();
 
 <body class="bg-light">
     <div class="container mt-5">
-        <h3 class="mb-4">Update Transaksi - Hai, <strong><?= htmlspecialchars($username) ?></strong></h3>
+        <h3>Update Transaksi - Hai, <strong><?= htmlspecialchars($username) ?></strong></h3>
 
-        <?php if (isset($_GET['success'])): ?>
-            <div class="alert alert-success">✅ Transaksi berhasil diperbarui.</div>
-        <?php elseif (isset($_GET['deleted'])): ?>
-            <div class="alert alert-warning">🗑️ Transaksi berhasil dihapus.</div>
+        <?php if (isset($_GET['updated'])): ?>
+            <div class="alert alert-success">Transaksi berhasil diperbarui.</div>
         <?php endif; ?>
 
-        <?php if ($edit_mode && $edit_data): ?>
+        <?php if (isset($_GET['deleted'])): ?>
+            <div class="alert alert-success">Transaksi berhasil dihapus.</div>
+        <?php endif; ?>
+
+        <?php if ($edit_data): ?>
             <div class="card mb-4">
                 <div class="card-body">
                     <h5>Edit Transaksi</h5>
-                    <form method="POST" action="">
+                    <form method="POST" action="update.php">
                         <input type="hidden" name="id" value="<?= $edit_data['id'] ?>">
                         <div class="mb-3">
-                            <label for="type" class="form-label">Tipe Transaksi</label>
+                            <label class="form-label">Tipe Transaksi</label>
                             <select name="type" class="form-select" required>
-                                <option value="pemasukan" <?= $edit_data['type'] === 'pemasukan' ? 'selected' : '' ?>>Pemasukan
+                                <option value="pemasukan" <?= $edit_data['type'] == 'pemasukan' ? 'selected' : '' ?>>Pemasukan
                                 </option>
-                                <option value="pengeluaran" <?= $edit_data['type'] === 'pengeluaran' ? 'selected' : '' ?>>
+                                <option value="pengeluaran" <?= $edit_data['type'] == 'pengeluaran' ? 'selected' : '' ?>>
                                     Pengeluaran</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label for="amount" class="form-label">Jumlah (Rp)</label>
+                            <label class="form-label">Jumlah</label>
                             <input type="number" name="amount" class="form-control" value="<?= $edit_data['amount'] ?>"
                                 required>
                         </div>
                         <div class="mb-3">
-                            <label for="description" class="form-label">Deskripsi</label>
+                            <label class="form-label">Deskripsi</label>
                             <input type="text" name="description" class="form-control"
                                 value="<?= htmlspecialchars($edit_data['description']) ?>" required>
                         </div>
@@ -141,7 +142,7 @@ $stmt->close();
         <?php endif; ?>
 
         <h5>Daftar Transaksi Anda</h5>
-        <table class="table table-bordered table-striped">
+        <table class="table table-bordered bg-white">
             <thead>
                 <tr>
                     <th>Tipe</th>
@@ -166,7 +167,7 @@ $stmt->close();
             </tbody>
         </table>
 
-        <a href="dashboard.php" class="btn btn-primary mt-3">← Kembali ke Dashboard</a>
+        <a href="dashboard.php" class="btn btn-primary mt-3">Kembali ke Dashboard</a>
     </div>
 </body>
 
