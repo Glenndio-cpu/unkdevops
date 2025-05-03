@@ -2,7 +2,7 @@
 session_start();
 include "config/db.php";
 
-// Cek apakah pengguna sudah login
+// Cek apakah user sudah login
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -10,80 +10,63 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-if (isset($_GET['id'])) {
-    $transaction_id = $_GET['id'];
+// Ambil username
+$stmt = $conn->prepare("SELECT username FROM users WHERE id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$stmt->bind_result($username);
+$stmt->fetch();
+$stmt->close();
 
-    // Ambil data transaksi berdasarkan ID
-    $stmt = $conn->prepare("SELECT * FROM transactions WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("ii", $transaction_id, $user_id);
+// Proses update jika form dikirim
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['id'])) {
+    $id = $_POST['id'];
+    $type = $_POST['type'];
+    $amount = $_POST['amount'];
+    $description = $_POST['description'];
+
+    // Update data
+    $stmt = $conn->prepare("UPDATE transactions SET type = ?, amount = ?, description = ? WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ssdii", $type, $amount, $description, $id, $user_id);
     $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows > 0) {
-        $transaction = $result->fetch_assoc();
-    } else {
-        echo "Transaksi tidak ditemukan!";
-        exit;
-    }
-
     $stmt->close();
 
-    // Proses update atau delete jika ada aksi
-    if ($_SERVER["REQUEST_METHOD"] == "POST") {
-        if (isset($_POST['update'])) {
-            // Ambil data yang diupdate
-            $type = $_POST['type'];
-            $amount = $_POST['amount'];
-            $description = $_POST['description'];
-            $category = $_POST['category'];
+    // Tambahkan ke histori
+    $histori = $conn->prepare("INSERT INTO history (transaction_id, user_id, action, action_date) VALUES (?, ?, 'Updated', NOW())");
+    $histori->bind_param("ii", $id, $user_id);
+    $histori->execute();
+    $histori->close();
 
-            // Update transaksi
-            $update_stmt = $conn->prepare("UPDATE transactions SET type = ?, amount = ?, description = ?, category = ? WHERE id = ? AND user_id = ?");
-            $update_stmt->bind_param("sdssii", $type, $amount, $description, $category, $transaction_id, $user_id);
-
-            if ($update_stmt->execute()) {
-                // Insert ke transaction_history
-                $action = 'Updated';
-                $action_time = date('Y-m-d H:i:s');
-                $history_stmt = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_time) VALUES (?, ?, ?, ?)");
-                $history_stmt->bind_param("iiss", $transaction_id, $user_id, $action, $action_time);
-                $history_stmt->execute();
-
-                // Redirect ke dashboard setelah sukses
-                header("Location: dashboard.php");
-                exit;
-            } else {
-                echo "Error: " . $update_stmt->error;
-            }
-
-            $update_stmt->close();
-        } elseif (isset($_POST['delete'])) {
-            // Hapus transaksi
-            $delete_stmt = $conn->prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?");
-            $delete_stmt->bind_param("ii", $transaction_id, $user_id);
-
-            if ($delete_stmt->execute()) {
-                // Insert ke transaction_history
-                $action = 'Deleted';
-                $action_time = date('Y-m-d H:i:s');
-                $history_stmt = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_time) VALUES (?, ?, ?, ?)");
-                $history_stmt->bind_param("iiss", $transaction_id, $user_id, $action, $action_time);
-                $history_stmt->execute();
-
-                // Redirect ke dashboard setelah sukses
-                header("Location: dashboard.php");
-                exit;
-            } else {
-                echo "Error: " . $delete_stmt->error;
-            }
-
-            $delete_stmt->close();
-        }
-    }
-} else {
-    echo "ID transaksi tidak diberikan!";
+    header("Location: update.php?success=1");
     exit;
 }
+
+// Jika ada parameter id, ambil data transaksi
+$edit_mode = false;
+$edit_data = null;
+
+if (isset($_GET['id'])) {
+    $edit_mode = true;
+    $id = $_GET['id'];
+
+    $stmt = $conn->prepare("SELECT id, type, amount, description FROM transactions WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $id, $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $edit_data = $result->fetch_assoc();
+    $stmt->close();
+
+    if (!$edit_data) {
+        die("Transaksi tidak ditemukan atau bukan milik Anda.");
+    }
+}
+
+// Ambil semua transaksi user
+$stmt = $conn->prepare("SELECT id, type, amount, description FROM transactions WHERE user_id = ? ORDER BY id DESC");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$transactions = $stmt->get_result();
+$stmt->close();
 ?>
 
 <!DOCTYPE html>
@@ -97,52 +80,67 @@ if (isset($_GET['id'])) {
 
 <body class="bg-light">
     <div class="container mt-5">
-        <h3 class="text-center mb-4">Update Transaksi</h3>
+        <h3 class="mb-4">Update Transaksi - Hai, <strong><?= htmlspecialchars($username) ?></strong></h3>
 
-        <div class="card shadow">
-            <div class="card-body">
-                <form action="update.php?id=<?php echo $transaction['id']; ?>" method="POST">
-                    <div class="mb-3">
-                        <label for="type" class="form-label">Tipe Transaksi</label>
-                        <select name="type" id="type" class="form-select" required>
-                            <option value="pemasukan" <?php echo ($transaction['type'] == 'pemasukan') ? 'selected' : ''; ?>>Pemasukan</option>
-                            <option value="pengeluaran" <?php echo ($transaction['type'] == 'pengeluaran') ? 'selected' : ''; ?>>Pengeluaran</option>
-                        </select>
-                    </div>
+        <?php if (isset($_GET['success'])): ?>
+            <div class="alert alert-success">Transaksi berhasil diperbarui!</div>
+        <?php endif; ?>
 
-                    <div class="mb-3">
-                        <label for="amount" class="form-label">Jumlah (Rp)</label>
-                        <input type="number" step="0.01" name="amount" id="amount" class="form-control"
-                            value="<?php echo $transaction['amount']; ?>" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="category" class="form-label">Kategori</label>
-                        <select name="category" id="category" class="form-select" required>
-                            <option value="Gaji" <?php echo ($transaction['category'] == 'Gaji') ? 'selected' : ''; ?>>
-                                Gaji</option>
-                            <option value="Hadiah" <?php echo ($transaction['category'] == 'Hadiah') ? 'selected' : ''; ?>>Hadiah</option>
-                            <option value="Investasi" <?php echo ($transaction['category'] == 'Investasi') ? 'selected' : ''; ?>>Investasi</option>
-                            <option value="Kebutuhan" <?php echo ($transaction['category'] == 'Kebutuhan') ? 'selected' : ''; ?>>Kebutuhan</option>
-                            <option value="Lainnya" <?php echo ($transaction['category'] == 'Lainnya') ? 'selected' : ''; ?>>Lainnya</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Deskripsi</label>
-                        <textarea name="description" id="description" class="form-control" rows="3"
-                            required><?php echo $transaction['description']; ?></textarea>
-                    </div>
-
-                    <div class="text-center">
-                        <button type="submit" name="update" class="btn btn-primary">Update Transaksi</button>
-                        <button type="submit" name="delete" class="btn btn-danger">Hapus Transaksi</button>
-                        <a href="dashboard.php" class="btn btn-secondary">Kembali</a>
-                    </div>
-                </form>
+        <?php if ($edit_mode && $edit_data): ?>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5>Edit Transaksi</h5>
+                    <form method="POST" action="">
+                        <input type="hidden" name="id" value="<?= $edit_data['id'] ?>">
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Tipe Transaksi</label>
+                            <select name="type" class="form-select" required>
+                                <option value="pemasukan" <?= $edit_data['type'] == 'pemasukan' ? 'selected' : '' ?>>Pemasukan
+                                </option>
+                                <option value="pengeluaran" <?= $edit_data['type'] == 'pengeluaran' ? 'selected' : '' ?>>
+                                    Pengeluaran</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="amount" class="form-label">Jumlah (Rp)</label>
+                            <input type="number" name="amount" class="form-control" value="<?= $edit_data['amount'] ?>"
+                                required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Deskripsi</label>
+                            <input type="text" name="description" class="form-control"
+                                value="<?= htmlspecialchars($edit_data['description']) ?>" required>
+                        </div>
+                        <button type="submit" class="btn btn-success">Simpan Perubahan</button>
+                        <a href="update.php" class="btn btn-secondary">Batal</a>
+                    </form>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
 
+        <h5>Daftar Transaksi</h5>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Tipe</th>
+                    <th>Jumlah</th>
+                    <th>Deskripsi</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php while ($row = $transactions->fetch_assoc()): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($row['type']) ?></td>
+                        <td>Rp <?= number_format($row['amount'], 2, ',', '.') ?></td>
+                        <td><?= htmlspecialchars($row['description']) ?></td>
+                        <td><a href="update.php?id=<?= $row['id'] ?>" class="btn btn-sm btn-warning">Edit</a></td>
+                    </tr>
+                <?php endwhile; ?>
+            </tbody>
+        </table>
+
+        <a href="dashboard.php" class="btn btn-primary">Kembali ke Dashboard</a>
     </div>
 </body>
 
