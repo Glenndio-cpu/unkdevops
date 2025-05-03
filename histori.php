@@ -60,11 +60,8 @@ $result = $stmt->get_result();
                         <td><?= $row['action_time'] ?></td>
                         <td>
                             <!-- Formulir Update -->
-                            <form action="proses_histori.php" method="POST" style="display:inline;">
-                                <input type="hidden" name="transaction_id" value="<?= $row['transaction_id'] ?>">
-                                <input type="hidden" name="action" value="update">
-                                <button type="submit" class="btn btn-warning btn-sm">Update</button>
-                            </form>
+                            <a href="update_transaksi.php?transaction_id=<?= $row['transaction_id'] ?>"
+                                class="btn btn-warning btn-sm">Update</a>
 
                             <!-- Formulir Delete -->
                             <form action="proses_histori.php" method="POST" style="display:inline;">

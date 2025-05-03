@@ -16,6 +16,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Handle Update
     if ($action == 'update') {
+        $type = $_POST['type'];
+        $amount = $_POST['amount'];
+        $description = $_POST['description'];
+        $category = $_POST['category'];
 
         // Update transaksi
         $stmt = $conn->prepare("UPDATE transactions SET type = ?, amount = ?, description = ?, category = ? WHERE id = ? AND user_id = ?");
@@ -52,5 +56,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     header("Location: histori.php");
     exit;
 }
-
 ?>
