@@ -20,7 +20,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
     // Insert transaksi baru ke tabel transactions
     $stmt = $conn->prepare("INSERT INTO transactions (user_id, type, amount, description, category) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("isds", $user_id, $type, $amount, $description, $category);
+    $stmt->bind_param("isdss", $user_id, $type, $amount, $description, $category);
 
     if ($stmt->execute()) {
         // Ambil ID transaksi yang baru ditambahkan
