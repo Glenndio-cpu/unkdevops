@@ -11,7 +11,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $type = $_POST['type'];
     $amount = floatval($_POST['amount']);
     $description = $_POST['description'] ?? '';
-    $category_id = intval($_POST['category_id']);
+    $category = $_POST['category'];
     $user_id = $_SESSION['user_id'];
 
     if ($type !== 'pemasukan' && $type !== 'pengeluaran') {
@@ -22,8 +22,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         die("Jumlah harus lebih dari 0.");
     }
 
-    $stmt = $conn->prepare("INSERT INTO transactions (user_id, type, amount, description, category_id) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("isdsi", $user_id, $type, $amount, $description, $category_id);
+    $stmt = $conn->prepare("INSERT INTO transactions (user_id, type, amount, description, category) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("isdss", $user_id, $type, $amount, $description, $category);
 
     if ($stmt->execute()) {
         header("Location: histori.php?status=berhasil");

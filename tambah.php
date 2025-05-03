@@ -10,9 +10,8 @@ if (!isset($_SESSION['user_id'])) {
 
 $message = "";
 
-// Ambil data kategori dari database
-$kategori_query = "SELECT id, name FROM categories ORDER BY name ASC";
-$kategori_result = $conn->query($kategori_query);
+// Daftar kategori yang tersedia sesuai dengan ENUM yang telah dibuat di database
+$categories = ['Makanan', 'Minuman', 'Transportasi', 'Kesehatan', 'Hiburan', 'Lainnya'];
 ?>
 
 <!DOCTYPE html>
@@ -53,12 +52,12 @@ $kategori_result = $conn->query($kategori_query);
             </div>
 
             <div class="mb-3">
-                <label for="category_id" class="form-label">Kategori</label>
-                <select name="category_id" class="form-select" required>
+                <label for="category" class="form-label">Kategori</label>
+                <select name="category" class="form-select" required>
                     <option value="">-- Pilih Kategori --</option>
-                    <?php while ($row = $kategori_result->fetch_assoc()): ?>
-                        <option value="<?= $row['id'] ?>"><?= htmlspecialchars($row['name']) ?></option>
-                    <?php endwhile; ?>
+                    <?php foreach ($categories as $category): ?>
+                        <option value="<?= $category ?>"><?= $category ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
 
