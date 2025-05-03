@@ -2,6 +2,7 @@
 session_start();
 include "config/db.php";
 
+// Cek login
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
@@ -9,68 +10,76 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-if (isset($_GET['action']) && isset($_GET['id'])) {
-    $id = intval($_GET['id']);
-    $action = $_GET['action'];
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $action = $_POST['action']; // action: 'add', 'update', 'delete'
+    $transaction_id = $_POST['transaction_id'];
 
-    if ($action == 'delete') {
-        $stmt = $conn->prepare("DELETE FROM transaction_history WHERE id = ? AND user_id = ?");
-        $stmt->bind_param("ii", $id, $user_id);
-        $stmt->execute();
+    // Handle Add
+    if ($action == 'add') {
+        // Ambil data transaksi
+        $type = $_POST['type'];
+        $amount = $_POST['amount'];
+        $description = $_POST['description'];
+        $category = $_POST['category'];
+
+        // Insert transaksi baru
+        $stmt = $conn->prepare("INSERT INTO transactions (user_id, type, amount, description, category) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("isdss", $user_id, $type, $amount, $description, $category);
+        if ($stmt->execute()) {
+            $transaction_id = $stmt->insert_id;
+
+            // Insert ke transaction_history
+            $action = 'Added';
+            $action_time = date('Y-m-d H:i:s');
+            $history_stmt = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_time) VALUES (?, ?, ?, ?)");
+            $history_stmt->bind_param("iiss", $transaction_id, $user_id, $action, $action_time);
+            $history_stmt->execute();
+            $history_stmt->close();
+        }
         $stmt->close();
-
-        header("Location: histori.php");
-        exit;
-    } elseif ($action == 'edit') {
-        // Tampilkan form edit
-        $stmt = $conn->prepare("SELECT * FROM transaction_history WHERE id = ? AND user_id = ?");
-        $stmt->bind_param("ii", $id, $user_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $data = $result->fetch_assoc();
-        $stmt->close();
-        ?>
-        <!DOCTYPE html>
-        <html>
-
-        <head>
-            <title>Edit Riwayat</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-        </head>
-
-        <body class="bg-light">
-            <div class="container mt-5">
-                <h3 class="text-center mb-4">Edit Riwayat Transaksi</h3>
-                <form action="proses_histori.php?action=update" method="post">
-                    <input type="hidden" name="id" value="<?= $data['id'] ?>">
-                    <div class="mb-3">
-                        <label for="action" class="form-label">Aksi</label>
-                        <select class="form-select" name="action" required>
-                            <option value="Added" <?= $data['action'] == 'Added' ? 'selected' : '' ?>>Added</option>
-                            <option value="Updated" <?= $data['action'] == 'Updated' ? 'selected' : '' ?>>Updated</option>
-                            <option value="Deleted" <?= $data['action'] == 'Deleted' ? 'selected' : '' ?>>Deleted</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
-                    <a href="histori.php" class="btn btn-secondary">Batal</a>
-                </form>
-            </div>
-        </body>
-
-        </html>
-        <?php
-        exit;
     }
-} elseif (isset($_GET['action']) && $_GET['action'] == 'update' && $_SERVER['REQUEST_METHOD'] == 'POST') {
-    $id = intval($_POST['id']);
-    $action = $_POST['action'];
 
-    $stmt = $conn->prepare("UPDATE transaction_history SET action = ? WHERE id = ? AND user_id = ?");
-    $stmt->bind_param("sii", $action, $id, $user_id);
-    $stmt->execute();
-    $stmt->close();
+    // Handle Update
+    elseif ($action == 'update') {
+        $type = $_POST['type'];
+        $amount = $_POST['amount'];
+        $description = $_POST['description'];
+        $category = $_POST['category'];
+
+        // Update transaksi
+        $stmt = $conn->prepare("UPDATE transactions SET type = ?, amount = ?, description = ?, category = ? WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("sdssii", $type, $amount, $description, $category, $transaction_id, $user_id);
+        if ($stmt->execute()) {
+            // Insert ke transaction_history
+            $action = 'Updated';
+            $action_time = date('Y-m-d H:i:s');
+            $history_stmt = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_time) VALUES (?, ?, ?, ?)");
+            $history_stmt->bind_param("iiss", $transaction_id, $user_id, $action, $action_time);
+            $history_stmt->execute();
+            $history_stmt->close();
+        }
+        $stmt->close();
+    }
+
+    // Handle Delete
+    elseif ($action == 'delete') {
+        // Delete transaksi
+        $stmt = $conn->prepare("DELETE FROM transactions WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("ii", $transaction_id, $user_id);
+        if ($stmt->execute()) {
+            // Insert ke transaction_history
+            $action = 'Deleted';
+            $action_time = date('Y-m-d H:i:s');
+            $history_stmt = $conn->prepare("INSERT INTO transaction_history (transaction_id, user_id, action, action_time) VALUES (?, ?, ?, ?)");
+            $history_stmt->bind_param("iiss", $transaction_id, $user_id, $action, $action_time);
+            $history_stmt->execute();
+            $history_stmt->close();
+        }
+        $stmt->close();
+    }
 
     header("Location: histori.php");
     exit;
 }
+
 ?>

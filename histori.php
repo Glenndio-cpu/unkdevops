@@ -48,6 +48,7 @@ $result = $stmt->get_result();
                 </tr>
             </thead>
             <tbody>
+                <!-- Tombol Update dan Hapus untuk setiap transaksi -->
                 <?php while ($row = $result->fetch_assoc()): ?>
                     <tr>
                         <td><?= $row['transaction_id'] ?></td>
@@ -58,10 +59,19 @@ $result = $stmt->get_result();
                         <td><?= $row['action'] ?></td>
                         <td><?= $row['action_time'] ?></td>
                         <td>
-                            <a href="proses_histori.php?action=edit&id=<?= $row['id'] ?>"
-                                class="btn btn-warning btn-sm">Edit</a>
-                            <a href="proses_histori.php?action=delete&id=<?= $row['id'] ?>" class="btn btn-danger btn-sm"
-                                onclick="return confirm('Yakin ingin menghapus data ini?')">Hapus</a>
+                            <!-- Formulir Update -->
+                            <form action="proses_histori.php" method="POST" style="display:inline;">
+                                <input type="hidden" name="transaction_id" value="<?= $row['transaction_id'] ?>">
+                                <input type="hidden" name="action" value="update">
+                                <button type="submit" class="btn btn-warning btn-sm">Update</button>
+                            </form>
+
+                            <!-- Formulir Delete -->
+                            <form action="proses_histori.php" method="POST" style="display:inline;">
+                                <input type="hidden" name="transaction_id" value="<?= $row['transaction_id'] ?>">
+                                <input type="hidden" name="action" value="delete">
+                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                            </form>
                         </td>
                     </tr>
                 <?php endwhile; ?>
