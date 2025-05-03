@@ -11,10 +11,10 @@ if (!isset($_SESSION['user_id'])) {
 $user_id = $_SESSION['user_id'];
 
 // Ambil riwayat transaksi dari tabel transaction_history
-$query = "SELECT th.*, t.type, t.amount, t.category FROM transaction_history th
-          JOIN transactions t ON th.transaction_id = t.id
-          WHERE th.user_id = ?
-          ORDER BY th.action_time DESC";
+$query = "SELECT th.*, t.type, t.amount, t.category, t.description
+            FROM transaction_history th
+            JOIN transactions t ON th.transaction_id = t.id
+            WHERE th.user_id = ?";
 $stmt = $conn->prepare($query);
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
