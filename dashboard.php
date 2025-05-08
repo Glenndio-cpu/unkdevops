@@ -44,7 +44,7 @@ $saldo = $total_pemasukan - $total_pengeluaran;
 
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Keuangan Harian</title>
+    <title>Glenndio Umboh</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
